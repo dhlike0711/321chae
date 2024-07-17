@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>교과융합 321체 스마트 그리드 전력분배</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            margin: 20px auto;
+        }
+        .container h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .container label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .container input {
+            width: calc(100% - 20px);
+            padding: 8px 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .container button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .result {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            margin: 20px auto;
+            text-align: center;
+        }
+        .result h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .result p {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="input-container">
+        <h1>스마트 그리드 데이터 입력</h1>
+        <label for="totalProduction">도시 총 전력 생산량 (kWh)</label>
+        <input type="number" id="totalProduction" placeholder="도시 총 전력 생산량">
+
+        <label for="householdConsumption">일반 가정 전력 사용량 (kWh)</label>
+        <input type="number" id="householdConsumption" placeholder="일반 가정 전력 사용량">
+
+        <label for="hospitalConsumption">병원 전력 사용량 (kWh)</label>
+        <input type="number" id="hospitalConsumption" placeholder="병원 전력 사용량">
+
+        <label for="factoryConsumption">공장 전력 사용량 (kWh)</label>
+        <input type="number" id="factoryConsumption" placeholder="공장 전력 사용량">
+
+        <label for="publicFacilityConsumption">공공기관 전력 사용량 (kWh)</label>
+        <input type="number" id="publicFacilityConsumption" placeholder="공공기관 전력 사용량">
+
+        <label for="temperature">기온 (℃)</label>
+        <input type="number" id="temperature" placeholder="기온">
+
+        <label for="humidity">습도 (%)</label>
+        <input type="number" id="humidity" placeholder="습도">
+
+        <label for="solarRadiation">일조량 (kWh/m²)</label>
+        <input type="number" id="solarRadiation" placeholder="일조량">
+
+        <label for="sunshineHours">일조시간 (h)</label>
+        <input type="number" id="sunshineHours" placeholder="일조시간">
+
+        <label for="windSpeed">풍속 (m/s)</label>
+        <input type="number" id="windSpeed" placeholder="풍속">
+
+        <button onclick="submitData()">데이터 제출</button>
+    </div>
+
+    <div class="result" id="result" style="display: none;">
+        <h2>결과</h2>
+        <p id="efficiencyWithoutSmartGrid"></p>
+        <p id="efficiencyWithSmartGrid"></p>
+        <p id="efficiencyGain"></p>
+        <p id="savedEnergy"></p>
+        <button onclick="restart()">다시 시작</button>
+    </div>
+
+    <script>
+        function adjustConsumption(household, hospital, factory, publicFacility, temperature, humidity) {
+            if (temperature > 25) {
+                household *= 1.1;
+                hospital *= 1.1;
+                factory *= 1.05;
+                publicFacility *= 1.05;
+            } else if (temperature < 15) {
+                household *= 1.1;
+                hospital *= 1.1;
+                factory *= 1.05;
+                publicFacility *= 1.05;
+            }
+            
+            if (humidity > 70) {
+                household *= 1.05;
+                hospital *= 1.05;
+                factory *= 1.03;
+                publicFacility *= 1.03;
+            }
+
+            return { household, hospital, factory, publicFacility };
+        }
+
+        function adjustProduction(totalProduction, solarRadiation, sunshineHours, windSpeed) {
+            const solarProduction = totalProduction * (solarRadiation / 5.0) * (sunshineHours / 10.0);
+            const windProduction = totalProduction * (windSpeed / 10.0);
+            const adjustedProduction = totalProduction + solarProduction + windProduction;
+            return adjustedProduction;
+        }
+
+        function submitData() {
+            const totalProduction = parseFloat(document.getElementById('totalProduction').value);
+            let householdConsumption = parseFloat(document.getElementById('householdConsumption').value);
+            let hospitalConsumption = parseFloat(document.getElementById('hospitalConsumption').value);
+            let factoryConsumption = parseFloat(document.getElementById('factoryConsumption').value);
+            let publicFacilityConsumption = parseFloat(document.getElementById('publicFacilityConsumption').value);
+            const temperature = parseFloat(document.getElementById('temperature').value);
+            const humidity = parseFloat(document.getElementById('humidity').value);
+            const solarRadiation = parseFloat(document.getElementById('solarRadiation').value);
+            const sunshineHours = parseFloat(document.getElementById('sunshineHours').value);
+            const windSpeed = parseFloat(document.getElementById('windSpeed').value);
+
+            if (
+                isNaN(totalProduction) || isNaN(householdConsumption) || isNaN(hospitalConsumption) || isNaN(factoryConsumption) ||
+                isNaN(publicFacilityConsumption) || isNaN(temperature) || isNaN(humidity) || isNaN(solarRadiation) ||
+                isNaN(sunshineHours) || isNaN(windSpeed)
+            ) {
+                alert("모든 값을 입력해 주세요.");
+                return;
+            }
+
+            const adjustedConsumption = adjustConsumption(householdConsumption, hospitalConsumption, factoryConsumption, publicFacilityConsumption, temperature, humidity);
+            householdConsumption = adjustedConsumption.household;
+            hospitalConsumption = adjustedConsumption.hospital;
+            factoryConsumption = adjustedConsumption.factory;
+            publicFacilityConsumption = adjustedConsumption.publicFacility;
+
+            const adjustedProduction = adjustProduction(totalProduction, solarRadiation, sunshineHours, windSpeed);
+
+            const productionPerBuilding = adjustedProduction / 4;
+            let leftoverEnergy = 0;
+
+            leftoverEnergy += Math.max(0, productionPerBuilding - householdConsumption);
+            leftoverEnergy += Math.max(0, productionPerBuilding - hospitalConsumption);
+            leftoverEnergy += Math.max(0, productionPerBuilding - factoryConsumption);
+            leftoverEnergy += Math.max(0, productionPerBuilding - publicFacilityConsumption);
+
+            const usedProduction = adjustedProduction - leftoverEnergy;
+            const efficiencyWithoutSmartGrid = (usedProduction / adjustedProduction) * 100;
+            const lossWithoutSmartGrid = (leftoverEnergy / adjustedProduction) * 100;
+
+            const totalConsumption = householdConsumption + hospitalConsumption + factoryConsumption + publicFacilityConsumption;
+            if (totalConsumption > adjustedProduction) {
+                alert("총 전력 소비량이 총 전력 생산량보다 많습니다. 전력 분배가 불가능합니다.");
+                return;
+            }
+
+            const remainingEnergy = adjustedProduction - totalConsumption;
+            const usedProductionWithSmartGrid = adjustedProduction - remainingEnergy;
+            const efficiencyWithSmartGrid = (usedProductionWithSmartGrid / adjustedProduction) * 100;
+            const efficiencyGain = Math.abs(efficiencyWithSmartGrid - efficiencyWithoutSmartGrid);
+            const savedEnergy = totalProduction - (totalProduction * lossWithoutSmartGrid) / 100;
+
+            document.getElementById('efficiencyWithSmartGrid').innerText = `스마트 그리드를 사용했을 때의 에너지 효율 증가량: ${efficiencyWithSmartGrid.toFixed(2)}%`;
+            document.getElementById('savedEnergy').innerText = `스마트 그리드를 통해 절약한 전력량: ${savedEnergy.toFixed(2)} kWh`;
+
+            document.getElementById('input-container').style.display = 'none';
+            document.getElementById('result').style.display = 'block';
+        }
+
+        function restart() {
+            document.getElementById('input-container').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('totalProduction').value = '';
+            document.getElementById('householdConsumption').value = '';
+            document.getElementById('hospitalConsumption').value = '';
+            document.getElementById('factoryConsumption').value = '';
+            document.getElementById('publicFacilityConsumption').value = '';
+            document.getElementById('temperature').value = '';
+            document.getElementById('humidity').value = '';
+            document.getElementById('solarRadiation').value = '';
+            document.getElementById('sunshineHours').value = '';
+            document.getElementById('windSpeed').value = '';
+        }
+    </script>
+</body>
+</html>
